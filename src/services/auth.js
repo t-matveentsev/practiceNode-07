@@ -16,6 +16,10 @@ import {
   refreshTokenLifeTime,
 } from "../constants/auth.js";
 import { TEMPLATES_DIR } from "../constants/index.js";
+import {
+  generateGoogleOAuthLink,
+  verifyCode,
+} from "../utils/googleOauthClient.js";
 
 const createSession = () => {
   const accessToken = randomBytes(30).toString("base64");
@@ -130,4 +134,34 @@ export const refreshUser = async ({ refreshToken, sessionId }) => {
 
 export const signoutUser = async (sessionId) => {
   await SessionCollection.deleteOne({ _id: sessionId });
+};
+
+export const getGoogleLink = () => {
+  return generateGoogleOAuthLink();
+};
+
+export const signupOrSigninWithGoogle = async (code) => {
+  const tokenPayload = await verifyCode(code);
+
+  const { email } = tokenPayload;
+
+  let user = await UserCollection.findOne({ email });
+
+  if (!user) {
+    user = await UserCollection.create({
+      username: tokenPayload.name,
+      email,
+      password: randomBytes(30).toString("base64"),
+      verify: tokenPayload.email_verified,
+    });
+  }
+
+  await SessionCollection.findOneAndDelete({ userId: user._id });
+
+  const newSession = createSession();
+
+  return SessionCollection.create({
+    userId: user._id,
+    ...newSession,
+  });
 };

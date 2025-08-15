@@ -5,6 +5,7 @@
 .vscode
 .DS_Store
 .idea
+.client_secret
 
 **/temp/**
 **/upload/**
